@@ -1,6 +1,11 @@
 const max = (arr) => Math.max(...arr);
 
+const min = (arr) => Math.min(...arr);
+
 const range = (lo, up) => Array.from(new Array(up+1), (x,i) => i + lo);
+
+const stringToArr = str => [...str];
+
 
 const getAlphabet = (str) => 
     String.prototype.concat(...new Set(str))
@@ -159,35 +164,85 @@ console.log();
 
 console.log('done');
 
-function randString(size) {
-    var text = "";
-    //var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    var possible = "ABCD";
-  
-    for (var i = 0; i < size; i++)
-      text += possible.charAt(Math.floor(Math.random() * possible.length));
-  
-    return text;
-}
 
-const performFunc = (func, string, pattern, repeats) => {
-    console.time('time');
-    console.log(func.name);
-    for(let i=0; i<repeats; i++){
-        func(string, pattern);
+class SeqAlignment {
+    constructor(S, T){
+        this.S = S;
+        this.T = T;
     }
-    console.timeEnd('time');
+    v(i, j){ return this.S.val(i) === this.T.val(j) ? 0 : 1; }
+
+    d(i, j){
+            if (i===0) {
+                return j;
+            }
+            if (j === 0) {
+                return i;
+            }
+            return Math.min(this.d(i-1, j-1) + this.v(i,j), this.d(i-1, j) + 1, this.d(i, j-1) +1);
+     }
+     distanceTable(){
+        const table = [];
+        for(let i=0; i<=this.S.length; i++){
+            table[i] = [];
+            for(let j=0; j<=this.T.length; j++){
+                table[i][j] = this.d(i,j);
+            }
+        }
+        return table;
+    }
+    w(i, j, S){
+        if (S === 'S') {
+            return this.d(i-1, j-1) + this.v(i, j) - this.d(i, j);
+        }
+        if (S === 'I') {
+            if (i === 0) {
+                return 0;
+            } 
+            return this.d(i, j-1) + 1 - this.d(i, j);
+        }
+        if (S === 'D') {
+            if (j === 0) {
+                return 0;
+            }
+            return this.d(i-1, j) + 1 - this.d(i, j);
+        }
+    }
+
+    trace(budget){
+        const stack = [];
+        const traceback = (i, j, w) => {
+            if (i===0 && j === 0){
+                // console.log(stack);
+                console.log(stack.reverse().join(''));
+            } else {
+                if (i > 0 && j > 0 && this.w(i, j, 'S') <= w){
+                    if (this.v(i, j) === 0){
+                        stack.push('M')
+                    } else {
+                        stack.push('R')
+                    }
+                    traceback(i-1, j-1, w-this.w(i, j, 'S'))
+                    stack.pop();
+                }
+                if (i > 0 && this.w(i,j,'D') <= w){
+                    stack.push('D');
+                    traceback(i-1, j, w-this.w(i,j,'D'))
+                    stack.pop();
+                }
+                if (j > 0 && this.w(i, j, 'I') <= w){
+                    stack.push('I');
+                    traceback(i, j-1, w-this.w(i,j,'I'));
+                    stack.pop();
+                }
+            }
+        }
+        traceback(this.S.length, this.T.length, budget);
+    }
 }
 
-const performace = () => {
-    const string = randString(10000000);
-    const pattern = randString(300);
+const seqAl = new SeqAlignment('CAAAC','CCAC');
+const table = seqAl.distanceTable();
+console.table(table);
 
-    const repeats = 10;
-
-    performFunc(naive, string, pattern, repeats);
-    performFunc(finiteAutomatonStringMatcher, string, pattern, repeats);
-    performFunc(knuthMorrisPratt, string, pattern, repeats);
-}
-
-performace();
+seqAl.trace(1);
